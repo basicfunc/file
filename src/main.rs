@@ -75,7 +75,7 @@ fn peek_be(c: &[u8], size: usize) -> i32 {
     ret as i32
 }
 
-fn do_elf(content_byte: &[u8]) {
+fn read_elf(content_byte: &[u8]) {
     let bits = content_byte[4] as usize;
     let endian = content_byte[5];
 
@@ -193,7 +193,7 @@ fn do_elf(content_byte: &[u8]) {
     }
 }
 
-fn do_zip(f: &mut File) -> String {
+fn read_zip(f: &mut File) -> String {
     let mut buffer = [0u8; 60];
 
     f.read_exact(&mut buffer).unwrap();
@@ -248,9 +248,48 @@ fn regular_file(filename: &Path) {
         magic = peek_le(&content_byte[60..], 4);
     }
 
-    if lenb >= 45 && content_byte.starts_with(b"\x7FELF") {
-        println!("Elf file ");
-        do_elf(&content_byte);
+    if lenb > 16 && content_byte.starts_with(b"\x23\x21") {
+        println!("Script or data to be passed to the program following the shebang (#!)")
+    } else if lenb >= 16 && content_byte.starts_with(b"{") && content_byte.ends_with(b"}") {
+        println!("JSON file")
+    } else if lenb > 64 && content_byte.starts_with(b"\x00\x01\x00\x00\x00") {
+        println!("ttf: TrueType font")
+    } else if lenb > 64 && content_byte.starts_with(b"\x4F\x54\x54\x4F") {
+        println!("otf: OpenType font")
+    }else if lenb > 32 && content_byte.starts_with(b"\x4d\x69\x63\x72\x6f\x73\x6f\x66\x74\x20\x43\x2f\x43\x2b\x2b\x20\x4d\x53\x46\x20\x37\x2e\x30\x30") {
+        println!("PDB file");
+    }else if lenb > 48 && content_byte.starts_with(b"\xED\xAB\xEE\xDB") {
+        println!("RedHat Package Manager (RPM) package")
+    }else if lenb > 48 && content_byte.starts_with(b"\x2E\x73\x6E\x64"){
+        println!("Au audio file format")
+    }
+    else if lenb > 64 && content_byte.starts_with(b"\x00\x01\x00\x00\x4D\x53\x49\x53\x41\x4D\x20\x44\x61\x74\x61\x62\x61\x73\x65") {
+        println!("Microsoft Money file")
+    }else if lenb > 64 && content_byte.starts_with(b"\x00\x01\x00\x00\x53\x74\x61\x6E\x64\x61\x72\x64\x20\x41\x43\x45\x20\x44\x42") {
+        println!("accdb: Microsoft Access 2007 Database")
+    }else if lenb > 64 && content_byte.starts_with(b"\x00\x01\x00\x00\x53\x74\x61\x6E\x64\x61\x72\x64\x20\x4A\x65\x74\x20\x44\x42") {
+        println!("accdb: Microsoft Access Database")
+    }else if lenb > 64 && content_byte.starts_with(b"\x0A\x16\x6F\x72\x67\x2E\x62\x69\x74\x63\x6F\x69\x6E\x2E\x70\x72") {
+        println!("MultiBit Bitcoin wallet file")
+    }else if lenb > 32 && content_byte.starts_with(b"\x0D\x44\x4F\x43") {
+        println!("DOC: DeskMate Document file")
+    }else if lenb > 128 && content_byte.starts_with(b"\x23\x20\x4D\x69\x63\x72\x6F\x73\x6F\x66\x74\x20\x44\x65\x76\x65\x6C\x6F\x70\x65\x72\x20\x53\x74\x75\x64\x69\x6F"){
+        println!("Microsoft Developer Studio project file")
+    }else if lenb > 16 && content_byte.starts_with(b"\x23\x40\x7E\x5E"){
+        println!("VBScript Encoded script")
+    } else if lenb > 8 && content_byte.starts_with(b"\xAC\xED"){
+        println!("Serialized Java Data")
+    } else if lenb > 64 && content_byte.starts_with(b"\x42\x4C\x45\x4E\x44\x45\x52"){
+        println!("Blender File Format")
+    } else if lenb > 8 && content_byte.starts_with(b"\x00\x61\x73\x6D"){
+        println!("WebAssembly binary format")
+    }else if lenb >= 8 && content_byte.starts_with(b"\x21\x3C\x61\x72\x63\x68\x3E\x0A"){
+        println!("linux deb file")
+    }
+
+    else if lenb >= 45 && content_byte.starts_with(b"\x7FELF") {
+        print!("Elf file ");
+        read_elf(&content_byte);
     } else if lenb >= 8 && content_byte.starts_with(b"!<arch>n") {
         println!("ar archive");
     } else if lenb > 28 && content_byte.starts_with(b"\x89PNG\x0d\x0a\x1a\x0a") {
@@ -268,7 +307,7 @@ fn regular_file(filename: &Path) {
     } else if lenb > 500 && content_byte[257..262] == *b"ustar" {
         println!("Posix tar archive");
     } else if lenb > 5 && content_byte.starts_with(b"PK\x03\x04") {
-        println!("{}", do_zip(&mut file));
+        println!("{}", read_zip(&mut file));
     } else if lenb > 4 && content_byte.starts_with(b"BZh") {
         println!("bzip2 compressed data");
     } else if lenb > 10 && content_byte.starts_with(b"\x1f\x8b") {
@@ -394,7 +433,7 @@ fn regular_file(filename: &Path) {
     } else if lenb > 32 && content_byte.starts_with(b"<?xml version") {
         println!("XML document")
     } else {
-        println!("Unknown")
+        println!("ASCII text")
     }
 }
 
